@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISW Diplomatic Stance Tracker 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2126;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0ede8;
+    --muted: #7a7870;
+    --helps-ukraine: #2563EB;
+    --hurts-russia: #93C5FD;
+    --neutral: #EAB308;
+    --helps-russia: #DC2626;
+    --hurts-ukraine: #FCA5A5;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .title-block h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .title-block p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .btn:hover { background: #2a2d34; border-color: rgba(255,255,255,0.15); }
+
+  .btn-download {
+    background: #185FA5;
+    border-color: #185FA5;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-download:hover { background: #1a6bb8; border-color: #1a6bb8; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 1.5rem;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  #chartWrap {
+    position: relative;
+    width: 100%;
+  }
+
+  footer {
+    margin-top: 1.5rem;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>ISW Diplomatic Stance Tracker</h1>
+    <p>Russia–Ukraine Conflict · Jan–Mar 2026 · 11 Weeks</p>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="downloadPNG()">
+      &#8595; Download PNG
+    </button>
+  </div>
+</header>
+
+<div class="stat-row" id="stats"></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:#2563EB"></span>Helps Ukraine</span>
+  <span><span class="dot" style="background:#93C5FD"></span>Hurts Russia</span>
+  <span><span class="dot" style="background:#EAB308"></span>Neutral</span>
+  <span><span class="dot" style="background:#DC2626"></span>Helps Russia</span>
+  <span><span class="dot" style="background:#FCA5A5"></span>Hurts Ukraine</span>
+</div>
+
+<div class="chart-container">
+  <div id="chartWrap">
+    <canvas id="myChart" role="img" aria-label="Horizontal stacked bar chart of diplomatic stances by country, sorted by total events"></canvas>
+  </div>
+</div>
+
+<footer>Source: Institute for the Study of War · Data covers weeks of Jan 5 – Mar 23, 2026</footer>
+
+<script>
+const raw = [
+  {c:'France',hu:5,hr:2,n:1,ur:0,hk:1},
+  {c:'United Kingdom',hu:6,hr:2,n:0,ur:0,hk:0},
+  {c:'United States',hu:4,hr:5,n:2,ur:0,hk:0},
+  {c:'Hungary',hu:0,hr:0,n:0,ur:2,hk:7},
+  {c:'Germany',hu:5,hr:1,n:0,ur:0,hk:0},
+  {c:'China',hu:0,hr:2,n:2,ur:3,hk:0},
+  {c:'Iran',hu:0,hr:1,n:0,ur:6,hk:0},
+  {c:'Slovakia',hu:0,hr:1,n:0,ur:0,hk:5},
+  {c:'Belarus',hu:0,hr:0,n:0,ur:4,hk:0},
+  {c:'Saudi Arabia',hu:3,hr:0,n:1,ur:0,hk:0},
+  {c:'Poland',hu:1,hr:2,n:0,ur:0,hk:1},
+  {c:'Moldova',hu:0,hr:3,n:0,ur:0,hk:1},
+  {c:'India',hu:0,hr:2,n:1,ur:1,hk:0},
+  {c:'Estonia',hu:2,hr:2,n:0,ur:0,hk:0},
+  {c:'North Korea',hu:0,hr:0,n:0,ur:3,hk:0},
+  {c:'Latvia',hu:2,hr:1,n:0,ur:0,hk:0},
+  {c:'Lithuania',hu:1,hr:2,n:0,ur:0,hk:0},
+  {c:'Armenia',hu:0,hr:1,n:1,ur:0,hk:0},
+  {c:'Azerbaijan',hu:0,hr:1,n:1,ur:0,hk:0},
+  {c:'Brazil',hu:0,hr:0,n:1,ur:1,hk:0},
+  {c:'Czech Republic',hu:1,hr:1,n:0,ur:0,hk:0},
+  {c:'Egypt',hu:0,hr:0,n:0,ur:2,hk:0},
+  {c:'Japan',hu:1,hr:1,n:0,ur:0,hk:0},
+  {c:'Mozambique',hu:1,hr:0,n:0,ur:1,hk:0},
+  {c:'Netherlands',hu:1,hr:0,n:1,ur:0,hk:0},
+  {c:'Qatar',hu:2,hr:0,n:0,ur:0,hk:0},
+  {c:'Romania',hu:2,hr:0,n:0,ur:0,hk:0},
+  {c:'Syria',hu:0,hr:0,n:0,ur:2,hk:0},
+  {c:'Turkiye',hu:1,hr:0,n:1,ur:0,hk:0},
+  {c:'United Arab Emirates',hu:1,hr:0,n:1,ur:0,hk:0},
+  {c:'Uzbekistan',hu:0,hr:0,n:1,ur:1,hk:0},
+  {c:'Finland',hu:0,hr:1,n:0,ur:0,hk:1},
+  {c:'Georgia',hu:0,hr:0,n:0,ur:1,hk:1},
+];
+
+const data = raw
+  .map(d => ({...d, total: d.hu+d.hr+d.n+d.ur+d.hk}))
+  .filter(d => d.total >= 2)
+  .sort((a,b) => b.total - a.total);
+
+const totalEvents = data.reduce((s,d)=>s+d.total,0);
+const proUkraine = data.filter(d=>(d.hu+d.hr)>(d.ur+d.hk)).length;
+const proRussia = data.filter(d=>(d.ur+d.hk)>(d.hu+d.hr)).length;
+const neutral = data.length - proUkraine - proRussia;
+
+document.getElementById('stats').innerHTML = `
+  <div class="stat"><div class="stat-label">Countries tracked</div><div class="stat-value" style="color:#f0ede8">${data.length}</div></div>
+  <div class="stat"><div class="stat-label">Total event-weeks</div><div class="stat-value" style="color:#f0ede8">${totalEvents}</div></div>
+  <div class="stat"><div class="stat-label">Lean pro-Ukraine</div><div class="stat-value" style="color:#2563EB">${proUkraine}</div></div>
+  <div class="stat"><div class="stat-label">Lean pro-Russia</div><div class="stat-value" style="color:#BA7517">${proRussia}</div></div>
+`;
+
+const wrapEl = document.getElementById('chartWrap');
+wrapEl.style.height = Math.max(300, data.length * 30 + 80) + 'px';
+
+new Chart(document.getElementById('myChart'), {
+  type: 'bar',
+  data: {
+    labels: data.map(d=>d.c),
+    datasets: [
+      { label: 'Helps Ukraine', data: data.map(d=>d.hu), backgroundColor: '#2563EB' },
+      { label: 'Hurts Russia',  data: data.map(d=>d.hr), backgroundColor: '#93C5FD' },
+      { label: 'Neutral',       data: data.map(d=>d.n),  backgroundColor: '#EAB308' },
+      { label: 'Helps Russia',  data: data.map(d=>d.ur), backgroundColor: '#DC2626' },
+      { label: 'Hurts Ukraine', data: data.map(d=>d.hk), backgroundColor: '#FCA5A5' },
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e2126',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#f0ede8',
+        bodyColor: '#7a7870',
+        titleFont: { family: 'Syne', size: 13, weight: '700' },
+        bodyFont: { family: 'DM Mono', size: 11 },
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        ticks: { stepSize: 1, color: '#5F5E5A', font: { family: 'DM Mono', size: 10 } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        title: { display: true, text: 'Number of event-weeks', color: '#5F5E5A', font: { family: 'DM Mono', size: 11 } }
+      },
+      y: {
+        stacked: true,
+        ticks: { color: '#f0ede8', font: { family: 'DM Mono', size: 11 }, autoSkip: false },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+function downloadPNG() {
+  const canvas = document.getElementById('myChart');
+  const link = document.createElement('a');
+  link.download = 'ISW_Diplomatic_Stance_2026.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+</script>
+</body>
+</html>
